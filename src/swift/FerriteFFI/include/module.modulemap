@@ -1,0 +1,4 @@
+module ferrite_ffiFFI {
+    header "ferrite_ffiFFI.h"
+    export *
+}

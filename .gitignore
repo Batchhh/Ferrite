@@ -1,0 +1,21 @@
+# Rust
+src/rust/target/
+**/*.rs.bk
+
+# Swift
+DerivedData/
+*.xcodeproj/
+xcuserdata/
+
+# UniFFI generated
+src/swift/Ferrite/Generated/
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Build artifacts
+libs/
+*.o
+*.d
+build/

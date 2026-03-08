@@ -1,0 +1,21 @@
+[package]
+name = "ferrite-ffi"
+version = "0.1.1"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib", "lib"]
+name = "ferrite_ffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/uniffi-bindgen.rs"
+
+[dependencies]
+ferrite-pe = { path = "../ferrite-pe" }
+memmap2 = "0.9"
+thiserror = "2"
+uniffi = { version = "0.31.0", features = ["cli"] }
+
+[build-dependencies]
+uniffi = { version = "0.31.0", features = ["build"] }
