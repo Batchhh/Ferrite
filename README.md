@@ -27,6 +27,7 @@ Ferrite is purpose-built for macOS. A Rust core handles all PE/CLR metadata pars
 ## Features
 
 - **Assembly browser** — explore assemblies through a structured sidebar tree: assembly → namespace → type → member
+- **IL code view** — syntax-highlighted IL disassembly with clickable type references and exception handler keywords
 - **C# decompilation** — IL bytecode lifted to readable C# with full type signatures, generics, and attributes
 - **Multi-assembly projects** — group related assemblies into projects that persist between sessions
 - **Fuzzy search** — `Cmd+K` to instantly search across all loaded types and members
