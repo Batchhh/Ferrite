@@ -3,7 +3,7 @@
   <br><br>
   <b><samp>FERRITE</samp></b>
   <br>
-  <sub>Native macOS .NET assembly browser and decompiler — built with <b>Rust</b> and <b>Swift</b>.</sub>
+  <sub>Native macOS .NET decompiler — built with <b>Rust</b> and <b>Swift</b>.</sub>
   <br><br>
   <img src="https://img.shields.io/badge/version-0.2.0-222?style=for-the-badge&logoColor=white" alt="Version">
   <img src="https://img.shields.io/badge/macOS-26%2B-222?style=for-the-badge&logoColor=white" alt="Platform">
