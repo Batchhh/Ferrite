@@ -1,10 +1,15 @@
 //! IL disassembler — emits ildasm-style text from parsed method bodies.
 
 mod opcodes;
+mod visibility;
 
 use crate::assembly::{Assembly, CustomAttribute, MethodDef, PeError, TypeDef, TypeKind};
 use crate::decompiler::resolver::MetadataResolver;
 use opcodes::{format_opcode, format_operand};
+use visibility::{il_field_visibility, il_method_visibility, il_type_visibility};
+
+#[cfg(test)]
+mod tests;
 
 const INDENT: &str = "    ";
 
@@ -19,6 +24,8 @@ pub fn disassemble_type_il(assembly: &Assembly, type_token: u32) -> Result<Strin
 }
 
 fn emit_type(out: &mut String, td: &TypeDef, resolver: &MetadataResolver, prefix: &str) {
+    let inner = format!("{prefix}{INDENT}");
+
     // Type header
     let vis = il_type_visibility(td.flags);
     let kind_kw = match td.kind {
@@ -53,7 +60,7 @@ fn emit_type(out: &mut String, td: &TypeDef, resolver: &MetadataResolver, prefix
     out.push_str("{\n");
 
     // Attributes
-    emit_attributes(out, &td.custom_attributes, &format!("{prefix}{INDENT}"));
+    emit_attributes(out, &td.custom_attributes, &inner);
     if !td.custom_attributes.is_empty() && (!td.fields.is_empty() || !td.methods.is_empty()) {
         out.push('\n');
     }
@@ -67,65 +74,56 @@ fn emit_type(out: &mut String, td: &TypeDef, resolver: &MetadataResolver, prefix
             ""
         };
         out.push_str(&format!(
-            "{prefix}{INDENT}.field {fvis}{static_}{ty} {name}\n",
+            "{inner}.field {fvis}{static_}{ty} {name}\n",
             ty = field.field_type,
             name = field.name,
         ));
-        emit_attributes(
-            out,
-            &field.custom_attributes,
-            &format!("{prefix}{INDENT}{INDENT}"),
-        );
+        emit_attributes(out, &field.custom_attributes, &format!("{inner}{INDENT}"));
     }
     if !td.fields.is_empty() && !td.methods.is_empty() {
         out.push('\n');
     }
+
+    // TODO: emit properties and their attributes
 
     // Methods
     for (i, method) in td.methods.iter().enumerate() {
         if i > 0 {
             out.push('\n');
         }
-        emit_method(out, method, resolver, &format!("{prefix}{INDENT}"));
+        emit_method(out, method, resolver, &inner);
     }
 
     // Nested types
     for nested in &td.nested_types {
         out.push('\n');
-        emit_type(out, nested, resolver, &format!("{prefix}{INDENT}"));
+        emit_type(out, nested, resolver, &inner);
     }
 
     out.push_str(prefix);
     out.push_str("}\n");
 }
 
+fn flag(flags: u16, mask: u16, label: &str) -> &str {
+    if flags & mask != 0 {
+        label
+    } else {
+        ""
+    }
+}
+
 fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver, prefix: &str) {
     let vis = il_method_visibility(method.flags);
-    let static_ = if method.flags & 0x0010 != 0 {
+    let f = method.flags;
+    let static_ = if f & 0x0010 != 0 {
         "static "
     } else {
         "instance "
     };
-    let virtual_ = if method.flags & 0x0040 != 0 {
-        "virtual "
-    } else {
-        ""
-    };
-    let abstract_ = if method.flags & 0x0400 != 0 {
-        "abstract "
-    } else {
-        ""
-    };
-    let hidebysig = if method.flags & 0x0080 != 0 {
-        "hidebysig "
-    } else {
-        ""
-    };
-    let specialname = if method.flags & 0x0800 != 0 {
-        "specialname "
-    } else {
-        ""
-    };
+    let virtual_ = flag(f, 0x0040, "virtual ");
+    let abstract_ = flag(f, 0x0400, "abstract ");
+    let hidebysig = flag(f, 0x0080, "hidebysig ");
+    let specialname = flag(f, 0x0800, "specialname ");
 
     let params: Vec<String> = method
         .params
@@ -184,96 +182,16 @@ fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver
     out.push_str("}\n");
 }
 
-fn il_type_visibility(flags: u32) -> &'static str {
-    match flags & 0x07 {
-        0x00 => "",
-        0x01 => "public ",
-        0x02 => "nested public ",
-        0x03 => "nested private ",
-        0x04 => "nested family ",
-        0x05 => "nested assembly ",
-        0x06 => "nested famorassem ",
-        0x07 => "nested famandassem ",
-        _ => "",
-    }
-}
-
-fn il_method_visibility(flags: u16) -> &'static str {
-    match flags & 0x0007 {
-        0x0001 => "private ",
-        0x0002 => "famandassem ",
-        0x0003 => "assembly ",
-        0x0004 => "family ",
-        0x0005 => "famorassem ",
-        0x0006 => "public ",
-        _ => "privatescope ",
-    }
-}
-
-fn il_field_visibility(flags: u16) -> &'static str {
-    match flags & 0x0007 {
-        0x0001 => "private ",
-        0x0002 => "famandassem ",
-        0x0003 => "assembly ",
-        0x0004 => "family ",
-        0x0005 => "famorassem ",
-        0x0006 => "public ",
-        _ => "privatescope ",
-    }
-}
-
 fn emit_attributes(out: &mut String, attrs: &[CustomAttribute], prefix: &str) {
     for attr in attrs {
-        if attr.arguments.is_empty() {
-            out.push_str(&format!(
-                "{prefix}.custom instance void {name}::.ctor()\n",
-                name = attr.name,
-            ));
+        let args = if attr.arguments.is_empty() {
+            String::new()
         } else {
-            out.push_str(&format!(
-                "{prefix}.custom instance void {name}::.ctor({args})\n",
-                name = attr.name,
-                args = attr.arguments.join(", "),
-            ));
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn make_attribute(name: &str, args: &[&str]) -> CustomAttribute {
-        CustomAttribute {
-            name: name.to_string(),
-            arguments: args.iter().map(|s| s.to_string()).collect(),
-        }
-    }
-
-    #[test]
-    fn test_emit_attributes_no_args() {
-        let attrs = vec![make_attribute("Serializable", &[])];
-        let mut out = String::new();
-        emit_attributes(&mut out, &attrs, "    ");
-        assert_eq!(out, "    .custom instance void Serializable::.ctor()\n");
-    }
-
-    #[test]
-    fn test_emit_attributes_with_args() {
-        let attrs = vec![make_attribute("Obsolete", &["\"Use NewMethod\""])];
-        let mut out = String::new();
-        emit_attributes(&mut out, &attrs, "    ");
-        assert_eq!(
-            out,
-            "    .custom instance void Obsolete::.ctor(\"Use NewMethod\")\n"
-        );
-    }
-
-    #[test]
-    fn test_emit_attributes_empty() {
-        let attrs: Vec<CustomAttribute> = vec![];
-        let mut out = String::new();
-        emit_attributes(&mut out, &attrs, "    ");
-        assert_eq!(out, "");
+            attr.arguments.join(", ")
+        };
+        out.push_str(&format!(
+            "{prefix}.custom instance void {name}::.ctor({args})\n",
+            name = attr.name,
+        ));
     }
 }
