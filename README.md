@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/version-0.2.0-222?style=for-the-badge&logoColor=white" alt="Version">
   <img src="https://img.shields.io/badge/macOS-26%2B-222?style=for-the-badge&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-222?style=for-the-badge&logoColor=white" alt="License">
-  <a href="https://x.com/BatchhRE"><img src="https://img.shields.io/badge/𝕏-222?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
+  <a href="https://x.com/BatchhRE"><img src="https://img.shields.io/badge/by%20batchh-222?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
 </p>
 
 <br>
