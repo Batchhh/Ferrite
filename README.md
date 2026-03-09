@@ -15,7 +15,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/welcome.png" width="720" alt="Ferrite welcome screen">
+  <img src="docs/images/inspector.png" width="720" alt="Ferrite inspector view">
 </p>
 
 <br>
@@ -34,10 +34,6 @@ Ferrite is purpose-built for macOS. A Rust core handles all PE/CLR metadata pars
 - **Code export** — `Cmd+E` saves the current decompiled view as a `.cs` file
 - **Memory-mapped I/O** — assemblies are memory-mapped for minimal RAM usage and fast load times
 - **Lazy loading** — type summaries load on startup; full details are fetched on demand
-
-<p align="center">
-  <img src="docs/images/inspector.png" width="720" alt="Ferrite inspector view">
-</p>
 
 ## Requirements
 

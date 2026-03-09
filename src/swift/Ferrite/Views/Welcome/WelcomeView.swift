@@ -35,23 +35,16 @@ struct WelcomeView: View {
     }
 
     private var centerContent: some View {
-        VStack(alignment: .leading, spacing: 32) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("Ferrite")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.primary)
+        VStack(spacing: 28) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("ferrite")
+                    .font(.system(size: 32, weight: .thin, design: .default))
+                    .tracking(6)
+                    .foregroundStyle(.white.opacity(0.7))
 
-                    Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.25))
-                }
-
-                Text(".NET Disassembler")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.3))
-                    .tracking(1.2)
-                    .textCase(.uppercase)
+                Text(" \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")")
+                    .font(.system(size: 11, weight: .light, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.15))
             }
 
             VStack(spacing: 2) {
@@ -68,15 +61,13 @@ struct WelcomeView: View {
 
             if !recentProjects.isEmpty {
                 VStack(spacing: 8) {
-                    HStack {
-                        Text("Recent")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.25))
-                            .tracking(0.6)
-                            .textCase(.uppercase)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
+                    Text("Recent")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.2))
+                        .tracking(0.8)
+                        .textCase(.uppercase)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
 
                     VStack(spacing: 0) {
                         ForEach(recentProjects) { project in
