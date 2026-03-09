@@ -5,7 +5,7 @@
   <br>
   <sub>A high-performance native macOS .NET inspector and decompiler, built with <b>Rust</b> and <b>Swift</b>.</sub>
   <br><br>
-  <img src="https://img.shields.io/badge/version-0.1.5-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.2.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/macOS-26%2B-blue?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/rust-1.80%2B-orange?style=for-the-badge" alt="Rust">
