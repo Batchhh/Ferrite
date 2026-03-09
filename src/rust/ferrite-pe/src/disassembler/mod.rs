@@ -1,10 +1,12 @@
 //! IL disassembler — emits ildasm-style text from parsed method bodies.
 
+mod exception_handlers;
 mod opcodes;
 mod visibility;
 
 use crate::assembly::{Assembly, CustomAttribute, MethodDef, PeError, TypeDef, TypeKind};
 use crate::decompiler::resolver::MetadataResolver;
+use exception_handlers::emit_exception_handlers;
 use opcodes::{format_opcode, format_operand};
 use visibility::{il_field_visibility, il_method_visibility, il_type_visibility};
 
@@ -158,6 +160,8 @@ fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver
             out.push_str(&format!("{inner}.locals init ({})\n", locals.join(", ")));
         }
 
+        emit_exception_handlers(out, &body.exception_handlers, resolver, &inner);
+
         if body.max_stack > 0 || !body.locals.is_empty() {
             out.push('\n');
         }
@@ -184,14 +188,10 @@ fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver
 
 fn emit_attributes(out: &mut String, attrs: &[CustomAttribute], prefix: &str) {
     for attr in attrs {
-        let args = if attr.arguments.is_empty() {
-            String::new()
-        } else {
-            attr.arguments.join(", ")
-        };
+        let args = attr.arguments.join(", ");
         out.push_str(&format!(
-            "{prefix}.custom instance void {name}::.ctor({args})\n",
-            name = attr.name,
+            "{prefix}.custom instance void {}::.ctor({args})\n",
+            attr.name,
         ));
     }
 }
