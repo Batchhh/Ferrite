@@ -16,6 +16,7 @@ extension CodePreviewView {
             "hidebysig", "specialname", "rtspecialname", "newslot",
             "extends", "implements", "init", "nested", "interface",
             "auto", "ansi", "beforefieldinit",
+            "to", "handler", "catch", "finally", "fault", "filter",
         ]
 
         return code.components(separatedBy: "\n").map { line in
