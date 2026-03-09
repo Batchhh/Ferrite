@@ -235,7 +235,7 @@ pub struct Assembly {
     pub us_heap_data: Vec<u8>,
 
     pub user_strings: HashMap<u32, String>,
-    pub(super) next_string_token: u32,
+    pub(crate) next_string_token: u32,
 }
 
 impl Assembly {
@@ -249,7 +249,7 @@ impl Assembly {
     }
 
     /// Allocate a synthetic string token and store the resolved string.
-    pub(super) fn intern_string(&mut self, s: String) -> u32 {
+    pub(crate) fn intern_string(&mut self, s: String) -> u32 {
         let token = 0x70000000 | self.next_string_token;
         self.user_strings.insert(token, s);
         self.next_string_token += 1;

@@ -5,24 +5,9 @@ import UniformTypeIdentifiers
 extension ContentView {
     var keyboardShortcuts: some View {
         Group {
-            Button("") { projectService.showOpenPanel(in: service) }
-                .keyboardShortcut("o", modifiers: .command)
+            // Cmd+P opens project manager (distinct from Cmd+Shift+P in menu)
             Button("") { projectService.showingProjectManager.toggle() }
                 .keyboardShortcut("p", modifiers: .command)
-            Button("") { projectService.showingNewProject.toggle() }
-                .keyboardShortcut("n", modifiers: .command)
-            Button("") {
-                withAnimation(.spring(duration: 0.3, bounce: 0.1)) {
-                    showSidebar.toggle()
-                }
-            }
-            .keyboardShortcut("b", modifiers: .command)
-            Button("") { if showsCode { projectService.exportCode(selection: service.selection, in: service) } }
-                .keyboardShortcut("e", modifiers: .command)
-            Button("") { if showsCode { projectService.exportHeader(selection: service.selection, in: service) } }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
-            Button("") { searchService.isPresented.toggle() }
-                .keyboardShortcut("k", modifiers: .command)
         }
         .hidden()
     }

@@ -4,6 +4,15 @@ import SwiftUI
 
 extension CodePreviewView {
     var lines: [CodeLine] {
+        switch service.codeLanguage {
+        case .csharp:
+            return csharpLines
+        case .il:
+            return ilLines
+        }
+    }
+
+    private var csharpLines: [CodeLine] {
         switch service.selection {
         case .type(let assemblyId, let token):
             if let type_ = service.findType(assemblyId: assemblyId, token: token) {
@@ -20,8 +29,6 @@ extension CodePreviewView {
                 if member.kind == .method,
                    let decompiled = service.decompileType(assemblyId: assemblyId, token: typeToken),
                    let extracted = extractMethodFromDecompiled(decompiled, member: member, typeName: type_.name) {
-                    // Expand all methods — the extracted code contains only this one method,
-                    // but the token queue may assign a different overload's token by name
                     let allMethodTokens = Set(type_.members.filter { $0.kind == .method }.map(\.token))
                     return parseDecompiledCode(extracted, type_: type_, assemblyId: assemblyId, expandedMethods: allMethodTokens)
                 }
@@ -31,6 +38,25 @@ extension CodePreviewView {
             break
         }
         return []
+    }
+
+    private var ilLines: [CodeLine] {
+        let assemblyId: String
+        let typeToken: UInt32
+        switch service.selection {
+        case .type(let aid, let token):
+            assemblyId = aid
+            typeToken = token
+        case .member(let aid, let tToken, _):
+            assemblyId = aid
+            typeToken = tToken
+        default:
+            return []
+        }
+        guard let il = service.disassembleTypeIL(assemblyId: assemblyId, token: typeToken) else {
+            return []
+        }
+        return parseILCode(il)
     }
 
     var hasCode: Bool {

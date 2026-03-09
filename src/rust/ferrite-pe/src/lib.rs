@@ -1,5 +1,6 @@
 pub mod assembly;
 pub mod decompiler;
+pub mod disassembler;
 pub mod exception_handler;
 pub mod il;
 

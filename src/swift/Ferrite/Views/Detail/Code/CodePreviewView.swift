@@ -102,23 +102,6 @@ struct CodePreviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.25), value: service.selection)
-        .background {
-            Group {
-                Button("") { toggleAllCollapsibles() }
-                    .keyboardShortcut("r", modifiers: .command)
-                Button("") {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        if isSearching {
-                            dismissSearch()
-                        } else {
-                            isSearching = true
-                        }
-                    }
-                }
-                    .keyboardShortcut("f", modifiers: .command)
-            }
-            .hidden()
-        }
         .onChange(of: service.codeCollapseToggleId) {
             toggleAllCollapsibles()
         }
@@ -131,6 +114,15 @@ struct CodePreviewView: View {
         }
         .onChange(of: searchQuery) {
             currentMatchIndex = 0
+        }
+        .onChange(of: service.codeSearchToggleId) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                if isSearching {
+                    dismissSearch()
+                } else {
+                    isSearching = true
+                }
+            }
         }
     }
 

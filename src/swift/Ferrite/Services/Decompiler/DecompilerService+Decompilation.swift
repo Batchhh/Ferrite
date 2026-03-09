@@ -64,4 +64,14 @@ extension DecompilerService {
             return nil
         }
     }
+
+    /// Disassemble a type to IL text, returning `nil` on failure.
+    func disassembleTypeIL(assemblyId: String, token: UInt32) -> String? {
+        do {
+            return try session.disassembleTypeIl(assemblyId: assemblyId, typeToken: token)
+        } catch {
+            self.error = "IL disassembly failed: \(error.localizedDescription)"
+            return nil
+        }
+    }
 }

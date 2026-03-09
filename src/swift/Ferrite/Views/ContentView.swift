@@ -24,6 +24,11 @@ struct ContentView: View {
     var body: some View {
         mainContent
             .background { keyboardShortcuts }
+            .onChange(of: service.sidebarToggleId) {
+                withAnimation(.spring(duration: 0.3, bounce: 0.1)) {
+                    showSidebar.toggle()
+                }
+            }
     }
 
     // Extracted to keep body type-check fast
@@ -163,6 +168,9 @@ struct ContentView: View {
 
             if showsCode {
                 BreadcrumbBar()
+
+                languageToggle
+                    .padding(.trailing, 14)
             } else {
                 WindowDragArea()
             }
@@ -170,6 +178,14 @@ struct ContentView: View {
         }
         .padding(.top, 4)
         .frame(height: Self.titleBarHeight)
+    }
+
+    private var languageToggle: some View {
+        LanguageToggleButton(language: service.codeLanguage) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                service.codeLanguage = service.codeLanguage == .csharp ? .il : .csharp
+            }
+        }
     }
 
     @ViewBuilder

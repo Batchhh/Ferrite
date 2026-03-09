@@ -62,7 +62,7 @@ pub fn decompile_type_with_config(
     Ok(result)
 }
 
-fn find_type_by_token(assembly: &Assembly, token: u32) -> Option<&TypeDef> {
+pub(crate) fn find_type_by_token(assembly: &Assembly, token: u32) -> Option<&TypeDef> {
     for td in &assembly.types {
         if td.token == token {
             return Some(td);

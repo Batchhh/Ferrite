@@ -139,4 +139,25 @@ impl DecompilerSession {
             }
         })
     }
+
+    /// Disassemble a type to ildasm-style IL. `type_token` is a TypeDef token (0x02XXXXXX).
+    pub fn disassemble_type_il(
+        &self,
+        assembly_id: String,
+        type_token: u32,
+    ) -> Result<String, FerriteError> {
+        let assemblies = self.assemblies.read();
+        let loaded = assemblies
+            .iter()
+            .find(|a| a.id == assembly_id)
+            .ok_or_else(|| FerriteError::NotFound {
+                message: format!("Assembly '{}' not found", assembly_id),
+            })?;
+
+        ferrite_pe::disassembler::disassemble_type_il(&loaded.assembly, type_token).map_err(|e| {
+            FerriteError::DecompilationFailed {
+                message: e.to_string(),
+            }
+        })
+    }
 }

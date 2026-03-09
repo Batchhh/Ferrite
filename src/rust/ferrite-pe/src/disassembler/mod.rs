@@ -10,9 +10,6 @@ use exception_handlers::emit_exception_handlers;
 use opcodes::{format_opcode, format_operand};
 use visibility::{il_field_visibility, il_method_visibility, il_type_visibility};
 
-#[cfg(test)]
-mod tests;
-
 const INDENT: &str = "    ";
 
 /// Disassemble a type to ildasm-style IL text.

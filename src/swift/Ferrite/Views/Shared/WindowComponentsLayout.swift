@@ -29,6 +29,37 @@ struct TitleBarButton: View {
     }
 }
 
+// MARK: - Language Toggle Button
+
+struct LanguageToggleButton: View {
+    let language: CodeLanguage
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(language.rawValue)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(isHovered ? .primary : .secondary)
+                .contentTransition(.numericText())
+                .animation(.easeInOut(duration: 0.2), value: language)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(.white.opacity(isHovered ? 0.08 : 0))
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .help("Switch to \(language == .csharp ? "IL" : "C#") (⌘L)")
+    }
+}
+
 /// Transparent area that allows dragging the window, replacing the native title bar drag behavior.
 struct WindowDragArea: NSViewRepresentable {
     func makeNSView(context: Context) -> DragView { DragView() }

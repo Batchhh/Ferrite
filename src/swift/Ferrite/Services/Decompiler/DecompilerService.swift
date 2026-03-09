@@ -1,6 +1,11 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum CodeLanguage: String, CaseIterable {
+    case csharp = "C#"
+    case il = "IL"
+}
+
 /// Main-actor observable service for loaded assemblies, selection state, and decompilation.
 @MainActor
 @Observable
@@ -14,6 +19,7 @@ final class DecompilerService {
 
     var loadedAssemblies: [AssemblySummary] = []
     var selection: Selection?
+    var codeLanguage: CodeLanguage = .csharp
     var isLoading = false
     var error: String?
     var batchLoading: BatchLoadingState? = nil
@@ -25,6 +31,10 @@ final class DecompilerService {
     var codeAllExpanded = false
     /// Incremented to trigger a toggle in CodePreviewView from the title bar button.
     var codeCollapseToggleId = 0
+    /// Incremented to trigger sidebar toggle from the menu bar.
+    var sidebarToggleId = 0
+    /// Incremented to trigger code search toggle from the menu bar.
+    var codeSearchToggleId = 0
 
     /// Short type name -> list of (assemblyId, token) for navigation lookups.
     var typeNameCache: [String: [(assemblyId: String, token: UInt32)]] = [:]
