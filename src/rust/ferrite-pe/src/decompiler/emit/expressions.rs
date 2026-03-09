@@ -1,8 +1,9 @@
 //! Expression emitters — converts AST expression nodes to C# source strings.
 
-use crate::decompiler::ast::{BinOp, Expr, LambdaBody, UnaryOp};
+use crate::decompiler::ast::{BinOp, Expr, InterpolatedPart, LambdaBody, UnaryOp};
 
 use super::emit_statements;
+use super::format::{escape_string, format_float};
 
 pub fn emit_expr(expr: &Expr) -> String {
     match expr {
@@ -99,6 +100,50 @@ pub fn emit_expr(expr: &Expr) -> String {
                 }
             }
         }
+        Expr::NullConditionalAccess(obj, name) => {
+            format!("{}?.{}", emit_expr(obj), name)
+        }
+        Expr::NullConditionalCall(obj, name, args) => {
+            let args_str = args.iter().map(emit_expr).collect::<Vec<_>>().join(", ");
+            format!("{}?.{}({})", emit_expr(obj), name, args_str)
+        }
+        Expr::InterpolatedString(parts) => {
+            let mut s = "$\"".to_string();
+            for part in parts {
+                match part {
+                    InterpolatedPart::Literal(text) => s.push_str(text),
+                    InterpolatedPart::Expression(expr) => {
+                        s.push('{');
+                        s.push_str(&emit_expr(expr));
+                        s.push('}');
+                    }
+                }
+            }
+            s.push('"');
+            s
+        }
+        Expr::Stackalloc(ty, size) => format!("stackalloc {}[{}]", ty, emit_expr(size)),
+        Expr::RangeExpr(start, end) => {
+            let start_str = start.as_ref().map_or(String::new(), |e| emit_expr(e));
+            let end_str = end.as_ref().map_or(String::new(), |e| emit_expr(e));
+            format!("{start_str}..{end_str}")
+        }
+        Expr::IndexFromEnd(expr) => format!("^{}", emit_expr(expr)),
+        Expr::SwitchExpr(expr, arms, default) => {
+            let mut parts: Vec<String> = arms
+                .iter()
+                .map(|(pattern, value)| format!("{} => {}", emit_expr(pattern), emit_expr(value)))
+                .collect();
+            if let Some(def) = default {
+                parts.push(format!("_ => {}", emit_expr(def)));
+            }
+            format!("{} switch {{ {} }}", emit_expr(expr), parts.join(", "))
+        }
+        Expr::Await(expr) => format!("await {}", emit_expr(expr)),
+        Expr::TupleExpr(elems) => {
+            let elems_str = elems.iter().map(emit_expr).collect::<Vec<_>>().join(", ");
+            format!("({})", elems_str)
+        }
         Expr::Raw(s) => s.clone(),
     }
 }
@@ -132,6 +177,9 @@ fn emit_binop(op: &BinOp) -> &str {
         BinOp::LogicalAnd => "&&",
         BinOp::LogicalOr => "||",
         BinOp::NullCoalesce => "??",
+        BinOp::AddChecked => "+",
+        BinOp::SubChecked => "-",
+        BinOp::MulChecked => "*",
     }
 }
 
@@ -141,21 +189,4 @@ fn emit_unary_op(op: &UnaryOp) -> &str {
         UnaryOp::Not => "~",
         UnaryOp::LogicalNot => "!",
     }
-}
-
-fn format_float(v: f64) -> String {
-    if v == v.floor() && v.abs() < 1e15 {
-        format!("{:.1}f", v)
-    } else {
-        format!("{}f", v)
-    }
-}
-
-fn escape_string(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
-        .replace('\0', "\\0")
 }

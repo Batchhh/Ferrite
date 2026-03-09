@@ -7,9 +7,12 @@ impl<'a> StackSimulator<'a> {
     /// Handles: arithmetic, unary, comparisons, type/object operations, ldtoken.
     pub(super) fn process_arith_and_types(&mut self, instr: &Instruction) -> bool {
         match instr.opcode {
-            OpCode::Add | OpCode::AddOvf | OpCode::AddOvfUn => self.binary_op(BinOp::Add),
-            OpCode::Sub | OpCode::SubOvf | OpCode::SubOvfUn => self.binary_op(BinOp::Sub),
-            OpCode::Mul | OpCode::MulOvf | OpCode::MulOvfUn => self.binary_op(BinOp::Mul),
+            OpCode::Add => self.binary_op(BinOp::Add),
+            OpCode::AddOvf | OpCode::AddOvfUn => self.binary_op(BinOp::AddChecked),
+            OpCode::Sub => self.binary_op(BinOp::Sub),
+            OpCode::SubOvf | OpCode::SubOvfUn => self.binary_op(BinOp::SubChecked),
+            OpCode::Mul => self.binary_op(BinOp::Mul),
+            OpCode::MulOvf | OpCode::MulOvfUn => self.binary_op(BinOp::MulChecked),
             OpCode::Div | OpCode::DivUn => self.binary_op(BinOp::Div),
             OpCode::Rem | OpCode::RemUn => self.binary_op(BinOp::Rem),
             OpCode::And => self.binary_op(BinOp::And),
@@ -257,7 +260,7 @@ impl<'a> StackSimulator<'a> {
             | OpCode::Readonly => {}
             OpCode::Localloc => {
                 let size = self.pop();
-                self.push(Expr::Raw(format!("stackalloc byte[{:?}]", size)));
+                self.push(Expr::Stackalloc("byte".into(), Box::new(size)));
             }
             OpCode::Cpobj => {
                 let _src = self.pop();

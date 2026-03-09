@@ -1,9 +1,5 @@
 use crate::decompiler::ast::*;
 
-// ---------------------------------------------------------------------------
-// Pattern 5: Constructor Call Rewriting
-// ---------------------------------------------------------------------------
-
 /// Rewrite `.ctor()` calls to `base()` calls in constructor bodies.
 pub(super) fn rewrite_ctor_calls(stmts: Vec<Statement>) -> Vec<Statement> {
     stmts
@@ -54,10 +50,6 @@ pub(super) fn rewrite_ctor_calls(stmts: Vec<Statement>) -> Vec<Statement> {
         })
         .collect()
 }
-
-// ---------------------------------------------------------------------------
-// Pattern 6: Compiler-Generated Code Simplification
-// ---------------------------------------------------------------------------
 
 pub(super) fn simplify_compiler_generated(stmts: Vec<Statement>) -> Vec<Statement> {
     let mut result = Vec::with_capacity(stmts.len());
@@ -141,10 +133,6 @@ fn recurse_compiler_generated(stmt: Statement) -> Statement {
         other => other,
     }
 }
-
-// ---------------------------------------------------------------------------
-// Pattern 7: Self-field prefix removal
-// ---------------------------------------------------------------------------
 
 pub(super) fn simplify_self_references(
     stmts: Vec<Statement>,

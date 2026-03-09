@@ -1,6 +1,6 @@
 use dotnetdll::prelude::*;
 
-use super::format_types::{format_method_ref_parent, format_method_type};
+use super::formatting::format_types::{format_method_ref_parent, format_method_type};
 
 /// Resolve a MethodSource to a qualified name like "TypeName::MethodName".
 pub(super) fn resolve_method_source_name(ms: &MethodSource, res: &Resolution) -> String {

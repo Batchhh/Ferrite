@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
-mod attributes;
-mod convert;
-mod format;
-mod format_types;
-mod instructions;
-mod method_body;
-mod parse_types;
+mod formatting;
+mod parsing;
 mod resolve;
 mod tree;
 mod types;
 
+pub use formatting::*;
+pub use parsing::*;
 pub use types::*;
 
 impl Assembly {
@@ -111,6 +108,3 @@ impl Assembly {
         Ok(asm)
     }
 }
-
-#[cfg(test)]
-mod tests;

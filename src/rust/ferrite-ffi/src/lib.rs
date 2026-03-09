@@ -1,4 +1,6 @@
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+
+use parking_lot::{Mutex, RwLock};
 
 use ferrite_pe::assembly::Assembly;
 
@@ -8,14 +10,16 @@ pub use types::*;
 mod convert;
 use convert::*;
 
+mod session_lazy;
+
 uniffi::setup_scaffolding!();
 
 /// In-memory cache of a loaded assembly: raw parsed form + pre-converted FFI metadata.
-struct LoadedAssembly {
-    id: String,
-    file_path: String,
-    info: AssemblyInfo,
-    assembly: Assembly,
+pub(crate) struct LoadedAssembly {
+    pub(crate) id: String,
+    pub(crate) file_path: String,
+    pub(crate) info: AssemblyInfo,
+    pub(crate) assembly: Assembly,
 }
 
 /// Manages a collection of loaded .NET assemblies for the decompiler UI.
@@ -23,8 +27,8 @@ struct LoadedAssembly {
 /// Exported via UniFFI as an `Arc`-wrapped object; safe to share across threads.
 #[derive(uniffi::Object)]
 pub struct DecompilerSession {
-    assemblies: RwLock<Vec<LoadedAssembly>>,
-    next_id: Mutex<u64>,
+    pub(crate) assemblies: RwLock<Vec<LoadedAssembly>>,
+    pub(crate) next_id: Mutex<u64>,
 }
 
 #[uniffi::export]
@@ -54,7 +58,7 @@ impl DecompilerSession {
 
         let info = convert_assembly(&assembly);
 
-        let mut id_counter = self.next_id.lock().unwrap();
+        let mut id_counter = self.next_id.lock();
         let id = format!("asm_{}", *id_counter);
         *id_counter += 1;
         drop(id_counter);
@@ -72,13 +76,13 @@ impl DecompilerSession {
             assembly,
         };
 
-        self.assemblies.write().unwrap().push(loaded);
+        self.assemblies.write().push(loaded);
         Ok(entry)
     }
 
     /// Unload the assembly identified by `id`.
     pub fn remove_assembly(&self, id: String) -> Result<(), FerriteError> {
-        let mut assemblies = self.assemblies.write().unwrap();
+        let mut assemblies = self.assemblies.write();
         let idx =
             assemblies
                 .iter()
@@ -94,7 +98,6 @@ impl DecompilerSession {
     pub fn get_assemblies(&self) -> Vec<LoadedAssemblyEntry> {
         self.assemblies
             .read()
-            .unwrap()
             .iter()
             .map(|a| LoadedAssemblyEntry {
                 id: a.id.clone(),
@@ -106,7 +109,7 @@ impl DecompilerSession {
 
     /// Return full metadata for a single assembly.
     pub fn get_assembly_info(&self, id: String) -> Result<AssemblyInfo, FerriteError> {
-        let assemblies = self.assemblies.read().unwrap();
+        let assemblies = self.assemblies.read();
         assemblies
             .iter()
             .find(|a| a.id == id)
@@ -122,7 +125,7 @@ impl DecompilerSession {
         assembly_id: String,
         type_token: u32,
     ) -> Result<String, FerriteError> {
-        let assemblies = self.assemblies.read().unwrap();
+        let assemblies = self.assemblies.read();
         let loaded = assemblies
             .iter()
             .find(|a| a.id == assembly_id)
@@ -131,93 +134,9 @@ impl DecompilerSession {
             })?;
 
         ferrite_pe::decompiler::decompile_type(&loaded.assembly, type_token).map_err(|e| {
-            FerriteError::ParseError {
+            FerriteError::DecompilationFailed {
                 message: e.to_string(),
             }
         })
-    }
-
-    // --- Lazy loading endpoints ---
-
-    /// Load a .NET assembly and return a lightweight summary (no type details).
-    pub fn load_assembly_lazy(&self, path: String) -> Result<AssemblySummary, FerriteError> {
-        let file = std::fs::File::open(&path).map_err(|e| FerriteError::IoError {
-            message: format!("{}: {}", path, e),
-        })?;
-        let data = unsafe { memmap2::Mmap::map(&file) }.map_err(|e| FerriteError::IoError {
-            message: format!("{}: {}", path, e),
-        })?;
-
-        let assembly = Assembly::parse(&data).map_err(|e| FerriteError::ParseError {
-            message: e.to_string(),
-        })?;
-
-        let mut id_counter = self.next_id.lock().unwrap();
-        let id = format!("asm_{}", *id_counter);
-        *id_counter += 1;
-        drop(id_counter);
-
-        let info = convert_assembly(&assembly);
-        let summary = convert_assembly_summary(&assembly, &id, &path);
-
-        let loaded = LoadedAssembly {
-            id,
-            file_path: path,
-            info,
-            assembly,
-        };
-
-        self.assemblies.write().unwrap().push(loaded);
-        Ok(summary)
-    }
-
-    /// Return lightweight type summaries for all types in a namespace.
-    pub fn get_namespace_types(
-        &self,
-        assembly_id: String,
-        namespace: String,
-    ) -> Result<Vec<TypeSummary>, FerriteError> {
-        let assemblies = self.assemblies.read().unwrap();
-        let loaded = assemblies
-            .iter()
-            .find(|a| a.id == assembly_id)
-            .ok_or_else(|| FerriteError::NotFound {
-                message: format!("Assembly '{}' not found", assembly_id),
-            })?;
-        Ok(convert_namespace_types(&loaded.assembly, &namespace))
-    }
-
-    /// Return full type details for a single type by token.
-    pub fn get_type_details(
-        &self,
-        assembly_id: String,
-        type_token: u32,
-    ) -> Result<TypeInfo, FerriteError> {
-        let assemblies = self.assemblies.read().unwrap();
-        let loaded = assemblies
-            .iter()
-            .find(|a| a.id == assembly_id)
-            .ok_or_else(|| FerriteError::NotFound {
-                message: format!("Assembly '{}' not found", assembly_id),
-            })?;
-
-        find_type_and_convert(&loaded.assembly, type_token).ok_or_else(|| FerriteError::NotFound {
-            message: format!("Type token 0x{:08X} not found", type_token),
-        })
-    }
-
-    /// Return all searchable items (types + members) for building the search index.
-    pub fn get_searchable_items(
-        &self,
-        assembly_id: String,
-    ) -> Result<Vec<SearchableItem>, FerriteError> {
-        let assemblies = self.assemblies.read().unwrap();
-        let loaded = assemblies
-            .iter()
-            .find(|a| a.id == assembly_id)
-            .ok_or_else(|| FerriteError::NotFound {
-                message: format!("Assembly '{}' not found", assembly_id),
-            })?;
-        Ok(convert_searchable_items(&loaded.assembly))
     }
 }

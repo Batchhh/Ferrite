@@ -1,17 +1,17 @@
 import SwiftUI
 
 struct SearchPanel: View {
-    @Environment(SearchService.self) private var searchService
-    @Environment(DecompilerService.self) private var service
-    @FocusState private var isFieldFocused: Bool
-    @State private var selectedIndex: Int = 0
-    @State private var isVisible = false
-    @State private var showFilters = false
+    @Environment(SearchService.self) var searchService
+    @Environment(DecompilerService.self) var service
+    @FocusState var isFieldFocused: Bool
+    @State var selectedIndex: Int = 0
+    @State var isVisible = false
+    @State var showFilters = false
 
     private var hasActiveFilters: Bool { !searchService.activeFilters.isEmpty }
     private var activeCount: Int { searchService.activeFilters.count }
-    private var showingRecents: Bool { searchService.query.isEmpty && !searchService.recentItems.isEmpty }
-    private var displayedItems: [SearchItem] { showingRecents ? searchService.recentItems : searchService.results }
+    var showingRecents: Bool { searchService.query.isEmpty && !searchService.recentItems.isEmpty }
+    var displayedItems: [SearchItem] { showingRecents ? searchService.recentItems : searchService.results }
 
     var body: some View {
         ZStack {
@@ -154,79 +154,4 @@ struct SearchPanel: View {
         .padding(.vertical, 14)
     }
 
-    // MARK: - Results
-
-    private var resultsList: some View {
-        Group {
-            if displayedItems.isEmpty && !searchService.query.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.quaternary)
-                    Text("No results for \"\(searchService.query)\"")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-                .transition(.opacity)
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(displayedItems.enumerated()), id: \.element.id) { index, item in
-                                SearchResultRow(item: item, isSelected: index == selectedIndex)
-                                    .id(item.id)
-                                    .onTapGesture { select(item) }
-                            }
-                        }
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 6)
-                    }
-                    .frame(maxHeight: 320)
-                    .onChange(of: selectedIndex) { _, newValue in
-                        guard newValue < displayedItems.count else { return }
-                        withAnimation(.easeOut(duration: 0.1)) {
-                            proxy.scrollTo(displayedItems[newValue].id, anchor: .center)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Actions
-
-    private func dismiss() {
-        withAnimation(.easeIn(duration: 0.15)) {
-            isVisible = false
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            searchService.isPresented = false
-            searchService.query = ""
-            searchService.performSearch()
-            showFilters = false
-        }
-    }
-
-    private func focusSearchField() {
-        DispatchQueue.main.async {
-            isFieldFocused = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            isFieldFocused = true
-        }
-    }
-
-    private func selectCurrent() {
-        guard !displayedItems.isEmpty,
-              selectedIndex < displayedItems.count else { return }
-        select(displayedItems[selectedIndex])
-    }
-
-    private func select(_ item: SearchItem) {
-        searchService.addRecent(item)
-        service.selection = item.selection
-        dismiss()
-    }
 }

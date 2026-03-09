@@ -6,6 +6,12 @@ pub enum FerriteError {
     ParseError { message: String },
     #[error("Not found: {message}")]
     NotFound { message: String },
+    #[error("Decompilation failed: {message}")]
+    DecompilationFailed { message: String },
+    #[error("Invalid token: {message}")]
+    InvalidToken { message: String },
+    #[error("Timeout: {message}")]
+    Timeout { message: String },
 }
 
 #[derive(Debug, Clone, uniffi::Enum)]

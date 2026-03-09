@@ -1,6 +1,6 @@
 [package]
 name = "ferrite-ffi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -14,6 +14,7 @@ path = "src/uniffi-bindgen.rs"
 [dependencies]
 ferrite-pe = { path = "../ferrite-pe" }
 memmap2 = "0.9"
+parking_lot = "0.12"
 thiserror = "2"
 uniffi = { version = "0.31.0", features = ["cli"] }
 

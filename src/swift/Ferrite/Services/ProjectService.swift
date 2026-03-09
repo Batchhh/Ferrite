@@ -1,7 +1,7 @@
 import AppKit
 import Observation
 
-private struct ProjectStore: Codable {
+struct ProjectStore: Codable {
     var projects: [Project]
     var tags: [ProjectTag]
 }
@@ -16,6 +16,7 @@ final class ProjectService {
     var showingNewProject = false
     var availableTags: [ProjectTag] = []
     var activeTagFilters: Set<UUID> = []
+    var lastError: String?
 
     var filteredProjects: [Project] {
         if activeTagFilters.isEmpty { return projects }
@@ -24,7 +25,7 @@ final class ProjectService {
         }
     }
 
-    private var storageURL: URL {
+    var storageURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = appSupport.appendingPathComponent("Ferrite", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -97,86 +98,6 @@ final class ProjectService {
         save()
     }
 
-    /// Export the currently selected type or member as a `.cs` file via a save panel.
-    func exportCode(selection: Selection?, in service: DecompilerService) {
-        var lines: [CodeLine] = []
-        var fileName = "code.cs"
-
-        switch selection {
-        case .type(let assemblyId, let token):
-            if let type_ = service.findType(assemblyId: assemblyId, token: token) {
-                lines = generateTypeCode(type_)
-                fileName = "\(type_.name).cs"
-            }
-        case .member(let assemblyId, let typeToken, let memberToken):
-            if let type_ = service.findType(assemblyId: assemblyId, token: typeToken),
-               let member = service.findMember(
-                   assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken
-               ) {
-                lines = generateMemberCode(member, declaringType: type_)
-                fileName = "\(type_.name).\(member.name).cs"
-            }
-        default:
-            return
-        }
-
-        let plainText = lines.map { $0.tokens.map(\.text).joined() }.joined(separator: "\n")
-
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.plainText]
-        panel.nameFieldStringValue = fileName
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? plainText.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    /// Export the currently selected type as a fields-only C++ `.h` header via a save panel.
-    func exportHeader(selection: Selection?, in service: DecompilerService) {
-        guard case .type(let assemblyId, let token) = selection,
-              let type_ = service.findType(assemblyId: assemblyId, token: token) else { return }
-
-        let text = generateHeaderExport(rootType: type_, assemblyId: assemblyId, service: service)
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "h")!]
-        panel.nameFieldStringValue = "\(type_.name).h"
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? text.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    func showOpenPanel(in service: DecompilerService) {
-        let panel = NSOpenPanel()
-        panel.title = "Open .NET Assembly"
-        panel.allowedContentTypes = [
-            .init(filenameExtension: "dll")!,
-            .init(filenameExtension: "exe")!,
-        ]
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        if panel.runModal() == .OK {
-            if panel.urls.count >= 20 {
-                service.loadAssemblies(urls: panel.urls)
-                if let project = currentProject,
-                   let idx = projects.firstIndex(where: { $0.id == project.id }) {
-                    for url in panel.urls {
-                        let path = url.path
-                        if !projects[idx].dllPaths.contains(path) {
-                            projects[idx].dllPaths.append(path)
-                        }
-                    }
-                    currentProject = projects[idx]
-                    save()
-                }
-            } else {
-                for url in panel.urls {
-                    addAssembly(url: url, in: service)
-                }
-            }
-        }
-    }
-
     // MARK: - Tag management
 
     @discardableResult
@@ -214,16 +135,11 @@ final class ProjectService {
     }
 
     func toggleTagFilter(_ tagId: UUID) {
-        if activeTagFilters.contains(tagId) {
-            activeTagFilters.remove(tagId)
-        } else {
-            activeTagFilters.insert(tagId)
-        }
+        if activeTagFilters.contains(tagId) { activeTagFilters.remove(tagId) }
+        else { activeTagFilters.insert(tagId) }
     }
 
-    func clearFilters() {
-        activeTagFilters.removeAll()
-    }
+    func clearFilters() { activeTagFilters.removeAll() }
 
     func tags(for project: Project) -> [ProjectTag] {
         project.tags.compactMap { tagId in
@@ -250,37 +166,10 @@ final class ProjectService {
               let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         var encoded: [String: [String]] = [:]
         for (key, tagSet) in tags {
-            if !tagSet.isEmpty {
-                encoded[key] = tagSet.map(\.rawValue)
-            }
+            if !tagSet.isEmpty { encoded[key] = tagSet.map(\.rawValue) }
         }
         projects[idx].itemTags = encoded
         currentProject = projects[idx]
         save()
-    }
-
-    // MARK: - Persistence
-
-    /// Encode and atomically write the project store to disk.
-    private func save() {
-        do {
-            let store = ProjectStore(projects: projects, tags: availableTags)
-            let data = try JSONEncoder().encode(store)
-            try data.write(to: storageURL, options: .atomic)
-        } catch {
-            print("ProjectService: failed to save: \(error)")
-        }
-    }
-
-    /// Load projects and tags from disk, falling back to a legacy `[Project]` format if needed.
-    private func load() {
-        guard let data = try? Data(contentsOf: storageURL) else { return }
-        if let store = try? JSONDecoder().decode(ProjectStore.self, from: data) {
-            projects = store.projects.sorted { $0.lastOpenedAt > $1.lastOpenedAt }
-            availableTags = store.tags
-        } else if let decoded = try? JSONDecoder().decode([Project].self, from: data) {
-            projects = decoded.sorted { $0.lastOpenedAt > $1.lastOpenedAt }
-            availableTags = []
-        }
     }
 }
