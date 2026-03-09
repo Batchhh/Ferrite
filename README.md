@@ -5,11 +5,10 @@
   <br>
   <sub>Native macOS .NET assembly browser and decompiler — built with <b>Rust</b> and <b>Swift</b>.</sub>
   <br><br>
-  <img src="https://img.shields.io/badge/version-0.2.0-blue?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/macOS-26%2B-blue?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/rust-1.80%2B-orange?style=for-the-badge" alt="Rust">
-  <img src="https://img.shields.io/badge/swift-6-orange?style=for-the-badge" alt="Swift">
+  <img src="https://img.shields.io/badge/version-0.2.0-222?style=for-the-badge&logoColor=white" alt="Version">
+  <img src="https://img.shields.io/badge/macOS-26%2B-222?style=for-the-badge&logoColor=white" alt="Platform">
+  <img src="https://img.shields.io/badge/license-MIT-222?style=for-the-badge&logoColor=white" alt="License">
+  <a href="https://x.com/BatchhRE"><img src="https://img.shields.io/badge/𝕏-222?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
 </p>
 
 <br>
