@@ -4,7 +4,9 @@ mod exception_handlers;
 mod opcodes;
 mod visibility;
 
-use crate::assembly::{Assembly, CustomAttribute, MethodDef, PeError, TypeDef, TypeKind};
+use crate::assembly::{
+    Assembly, CustomAttribute, EventDef, MethodDef, PeError, PropertyDef, TypeDef, TypeKind,
+};
 use crate::decompiler::resolver::MetadataResolver;
 use exception_handlers::emit_exception_handlers;
 use opcodes::{format_opcode, format_operand};
@@ -83,7 +85,21 @@ fn emit_type(out: &mut String, td: &TypeDef, resolver: &MetadataResolver, prefix
         out.push('\n');
     }
 
-    // TODO: emit properties and their attributes
+    // Properties
+    for prop in &td.properties {
+        emit_property(out, prop, td, &inner);
+    }
+    if !td.properties.is_empty() && !td.methods.is_empty() {
+        out.push('\n');
+    }
+
+    // Events
+    for event in &td.events {
+        emit_event(out, event, td, &inner);
+    }
+    if !td.events.is_empty() && !td.methods.is_empty() {
+        out.push('\n');
+    }
 
     // Methods
     for (i, method) in td.methods.iter().enumerate() {
@@ -177,6 +193,139 @@ fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver
         }
     } else {
         out.push_str(&format!("{prefix}{INDENT}// No method body\n"));
+    }
+
+    out.push_str(prefix);
+    out.push_str("}\n");
+}
+
+fn emit_property(out: &mut String, prop: &PropertyDef, td: &TypeDef, prefix: &str) {
+    let is_instance = prop
+        .getter_token
+        .or(prop.setter_token)
+        .and_then(|tok| td.methods.iter().find(|m| m.token == tok))
+        .map(|m| m.flags & 0x0010 == 0)
+        .unwrap_or(true);
+
+    let instance_str = if is_instance { "instance " } else { "" };
+
+    out.push_str(&format!(
+        "{prefix}.property {instance_str}{ty} {name}()\n",
+        ty = prop.property_type,
+        name = prop.name,
+    ));
+    out.push_str(prefix);
+    out.push_str("{\n");
+
+    let inner = format!("{prefix}{INDENT}");
+    emit_attributes(out, &prop.custom_attributes, &inner);
+
+    if let Some(getter_tok) = prop.getter_token {
+        if let Some(getter) = td.methods.iter().find(|m| m.token == getter_tok) {
+            let vis = il_method_visibility(getter.flags);
+            let static_ = if getter.flags & 0x0010 != 0 {
+                ""
+            } else {
+                "instance "
+            };
+            let params: Vec<String> = getter.params.iter().map(|p| p.type_name.clone()).collect();
+            out.push_str(&format!(
+                "{inner}.get {vis}{static_}{ret} {cls}::{name}({params})\n",
+                ret = getter.return_type,
+                cls = td.name,
+                name = getter.name,
+                params = params.join(", "),
+            ));
+        }
+    }
+    if let Some(setter_tok) = prop.setter_token {
+        if let Some(setter) = td.methods.iter().find(|m| m.token == setter_tok) {
+            let vis = il_method_visibility(setter.flags);
+            let static_ = if setter.flags & 0x0010 != 0 {
+                ""
+            } else {
+                "instance "
+            };
+            let params: Vec<String> = setter.params.iter().map(|p| p.type_name.clone()).collect();
+            out.push_str(&format!(
+                "{inner}.set {vis}{static_}{ret} {cls}::{name}({params})\n",
+                ret = setter.return_type,
+                cls = td.name,
+                name = setter.name,
+                params = params.join(", "),
+            ));
+        }
+    }
+
+    out.push_str(prefix);
+    out.push_str("}\n");
+}
+
+fn emit_event(out: &mut String, event: &EventDef, td: &TypeDef, prefix: &str) {
+    out.push_str(&format!(
+        "{prefix}.event {ty} {name}\n",
+        ty = event.event_type,
+        name = event.name,
+    ));
+    out.push_str(prefix);
+    out.push_str("{\n");
+
+    let inner = format!("{prefix}{INDENT}");
+    emit_attributes(out, &event.custom_attributes, &inner);
+
+    if let Some(add_tok) = event.add_token {
+        if let Some(adder) = td.methods.iter().find(|m| m.token == add_tok) {
+            let vis = il_method_visibility(adder.flags);
+            let static_ = if adder.flags & 0x0010 != 0 {
+                ""
+            } else {
+                "instance "
+            };
+            let params: Vec<String> = adder.params.iter().map(|p| p.type_name.clone()).collect();
+            out.push_str(&format!(
+                "{inner}.addon {vis}{static_}{ret} {cls}::{name}({params})\n",
+                ret = adder.return_type,
+                cls = td.name,
+                name = adder.name,
+                params = params.join(", "),
+            ));
+        }
+    }
+    if let Some(remove_tok) = event.remove_token {
+        if let Some(remover) = td.methods.iter().find(|m| m.token == remove_tok) {
+            let vis = il_method_visibility(remover.flags);
+            let static_ = if remover.flags & 0x0010 != 0 {
+                ""
+            } else {
+                "instance "
+            };
+            let params: Vec<String> = remover.params.iter().map(|p| p.type_name.clone()).collect();
+            out.push_str(&format!(
+                "{inner}.removeon {vis}{static_}{ret} {cls}::{name}({params})\n",
+                ret = remover.return_type,
+                cls = td.name,
+                name = remover.name,
+                params = params.join(", "),
+            ));
+        }
+    }
+    if let Some(raise_tok) = event.raise_token {
+        if let Some(raiser) = td.methods.iter().find(|m| m.token == raise_tok) {
+            let vis = il_method_visibility(raiser.flags);
+            let static_ = if raiser.flags & 0x0010 != 0 {
+                ""
+            } else {
+                "instance "
+            };
+            let params: Vec<String> = raiser.params.iter().map(|p| p.type_name.clone()).collect();
+            out.push_str(&format!(
+                "{inner}.fire {vis}{static_}{ret} {cls}::{name}({params})\n",
+                ret = raiser.return_type,
+                cls = td.name,
+                name = raiser.name,
+                params = params.join(", "),
+            ));
+        }
     }
 
     out.push_str(prefix);

@@ -146,6 +146,30 @@ pub(crate) fn convert_type(td: &ferrite_pe::TypeDef) -> TypeInfo {
         })
         .collect();
 
+    let events: Vec<EventInfo> = td
+        .events
+        .iter()
+        .map(|e| {
+            let event_attrs: Vec<AttributeInfo> = e
+                .custom_attributes
+                .iter()
+                .map(|a| AttributeInfo {
+                    name: a.name.clone(),
+                    arguments: a.arguments.clone(),
+                })
+                .collect();
+            EventInfo {
+                name: e.name.to_string(),
+                token: e.token,
+                event_type: e.event_type.clone(),
+                add_token: e.add_token,
+                remove_token: e.remove_token,
+                raise_token: e.raise_token,
+                attributes_list: event_attrs,
+            }
+        })
+        .collect();
+
     let nested_types = td.nested_types.iter().map(convert_type).collect();
 
     let type_attrs: Vec<AttributeInfo> = td
@@ -166,6 +190,7 @@ pub(crate) fn convert_type(td: &ferrite_pe::TypeDef) -> TypeInfo {
         attributes,
         members,
         properties,
+        events,
         nested_types,
         base_type: td.base_type.clone(),
         interfaces: td.interfaces.clone(),

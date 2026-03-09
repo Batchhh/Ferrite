@@ -60,6 +60,13 @@ pub(in crate::assembly) fn convert_property_attributes(
     convert_attributes(attrs, res)
 }
 
+pub(in crate::assembly) fn convert_event_attributes(
+    attrs: &[dotnetdll::resolved::attribute::Attribute],
+    res: &Resolution,
+) -> Vec<CustomAttribute> {
+    convert_attributes(attrs, res)
+}
+
 /// Extract the short display name of an attribute from its constructor reference.
 ///
 /// Strips the namespace prefix and the trailing `Attribute` suffix (e.g. `System.ObsoleteAttribute` → `Obsolete`).

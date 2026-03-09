@@ -3,10 +3,13 @@ use std::sync::Arc;
 use dotnetdll::prelude::*;
 
 use super::super::parsing::attributes::{
-    convert_field_attributes, convert_method_attributes, convert_property_attributes,
+    convert_event_attributes, convert_field_attributes, convert_method_attributes,
+    convert_property_attributes,
 };
 use super::super::parsing::method_body::convert_method_body;
-use super::super::{Assembly, FieldDef, MethodDef, MethodDefCallInfo, ParamInfo, PropertyDef};
+use super::super::{
+    Assembly, EventDef, FieldDef, MethodDef, MethodDefCallInfo, ParamInfo, PropertyDef,
+};
 use super::format::simplify_method_name;
 use super::format_types::{format_member_type, format_method_type, format_return_type};
 
@@ -281,6 +284,39 @@ pub(in crate::assembly) fn find_accessor_token(
     };
     let accessor_name = accessor.name.as_ref();
 
+    converted_methods
+        .iter()
+        .find(|m| *m.name == *accessor_name)
+        .map(|m| m.token)
+}
+
+/// Convert a dotnetdll event definition to [`EventDef`].
+pub(in crate::assembly) fn convert_event(
+    event: &dotnetdll::resolved::members::Event,
+    token: u32,
+    add_token: Option<u32>,
+    remove_token: Option<u32>,
+    raise_token: Option<u32>,
+    res: &Resolution,
+) -> EventDef {
+    let event_type = format_member_type(&event.delegate_type, res);
+    EventDef {
+        token,
+        name: Arc::from(event.name.as_ref()),
+        event_type,
+        add_token,
+        remove_token,
+        raise_token,
+        custom_attributes: convert_event_attributes(&event.attributes, res),
+    }
+}
+
+/// Find the token of an event accessor in the already-converted method list.
+pub(in crate::assembly) fn find_event_accessor_token(
+    converted_methods: &[MethodDef],
+    accessor: &dotnetdll::resolved::members::Method,
+) -> Option<u32> {
+    let accessor_name = accessor.name.as_ref();
     converted_methods
         .iter()
         .find(|m| *m.name == *accessor_name)

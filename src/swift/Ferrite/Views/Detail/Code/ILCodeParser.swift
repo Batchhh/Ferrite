@@ -8,6 +8,7 @@ extension CodePreviewView {
             ".class", ".method", ".field", ".maxstack", ".locals",
             ".entrypoint", ".try", ".catch", ".finally", ".override",
             ".property", ".event", ".custom", ".pack", ".size",
+            ".get", ".set", ".addon", ".removeon", ".fire",
         ]
         let ilKeywords: Set<String> = [
             "cil", "managed", "public", "private", "family", "assembly",

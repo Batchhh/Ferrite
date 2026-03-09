@@ -90,6 +90,17 @@ pub struct PropertyInfo {
 }
 
 #[derive(Debug, Clone, uniffi::Record)]
+pub struct EventInfo {
+    pub name: String,
+    pub token: u32,
+    pub event_type: String,
+    pub add_token: Option<u32>,
+    pub remove_token: Option<u32>,
+    pub raise_token: Option<u32>,
+    pub attributes_list: Vec<AttributeInfo>,
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct MemberInfo {
     pub name: String,
     pub kind: MemberKind,
@@ -114,6 +125,7 @@ pub struct TypeInfo {
     pub attributes: TypeAttributes,
     pub members: Vec<MemberInfo>,
     pub properties: Vec<PropertyInfo>,
+    pub events: Vec<EventInfo>,
     pub nested_types: Vec<TypeInfo>,
     pub base_type: Option<String>,
     pub interfaces: Vec<String>,
@@ -174,6 +186,7 @@ pub struct TypeSummary {
     pub attributes: TypeAttributes,
     pub member_count: u32,
     pub property_count: u32,
+    pub event_count: u32,
     pub nested_type_count: u32,
     pub base_type: Option<String>,
     pub interfaces: Vec<String>,
@@ -200,5 +213,6 @@ pub enum SearchableKind {
     Method,
     Field,
     Property,
+    Event,
     Constant,
 }

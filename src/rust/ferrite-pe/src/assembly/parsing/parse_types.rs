@@ -19,6 +19,7 @@ pub(in crate::assembly) fn parse_type_definitions(
     let mut global_method_counter: u32 = 1;
     let mut global_field_counter: u32 = 1;
     let mut global_property_counter: u32 = 1;
+    let mut global_event_counter: u32 = 1;
 
     // child_raw_idx -> parent_raw_idx, resolved via pointer identity (TypeIndex is opaque)
     let ptr_to_idx: HashMap<*const (), usize> = res
@@ -56,6 +57,9 @@ pub(in crate::assembly) fn parse_type_definitions(
             }
             for _prop in &typedef.properties {
                 global_property_counter += 1;
+            }
+            for _event in &typedef.events {
+                global_event_counter += 1;
             }
             asm.type_def_names.push(Arc::from(typedef.name.as_ref()));
             continue;
@@ -147,6 +151,64 @@ pub(in crate::assembly) fn parse_type_definitions(
             global_property_counter += 1;
         }
 
+        let mut events = Vec::with_capacity(typedef.events.len());
+        for event in typedef.events.iter() {
+            let event_token = 0x14000000 | global_event_counter;
+
+            let add_token = {
+                let accessor = &event.add_listener;
+                Some(
+                    convert::find_event_accessor_token(&methods, accessor).unwrap_or_else(|| {
+                        let token = 0x06000000 | global_method_counter;
+                        global_method_counter += 1;
+                        asm.method_def_call_infos
+                            .push(convert::method_call_info(accessor));
+                        let method_def = convert::convert_method(accessor, token, res, asm);
+                        asm.method_def_names.push(Arc::clone(&method_def.name));
+                        methods.push(method_def);
+                        token
+                    }),
+                )
+            };
+            let remove_token = {
+                let accessor = &event.remove_listener;
+                Some(
+                    convert::find_event_accessor_token(&methods, accessor).unwrap_or_else(|| {
+                        let token = 0x06000000 | global_method_counter;
+                        global_method_counter += 1;
+                        asm.method_def_call_infos
+                            .push(convert::method_call_info(accessor));
+                        let method_def = convert::convert_method(accessor, token, res, asm);
+                        asm.method_def_names.push(Arc::clone(&method_def.name));
+                        methods.push(method_def);
+                        token
+                    }),
+                )
+            };
+            let raise_token = event.raise_event.as_ref().map(|accessor| {
+                convert::find_event_accessor_token(&methods, accessor).unwrap_or_else(|| {
+                    let token = 0x06000000 | global_method_counter;
+                    global_method_counter += 1;
+                    asm.method_def_call_infos
+                        .push(convert::method_call_info(accessor));
+                    let method_def = convert::convert_method(accessor, token, res, asm);
+                    asm.method_def_names.push(Arc::clone(&method_def.name));
+                    methods.push(method_def);
+                    token
+                })
+            });
+
+            events.push(convert::convert_event(
+                event,
+                event_token,
+                add_token,
+                remove_token,
+                raise_token,
+                res,
+            ));
+            global_event_counter += 1;
+        }
+
         let custom_attributes = attributes::convert_attributes(&typedef.attributes, res);
 
         let namespace = typedef
@@ -166,6 +228,7 @@ pub(in crate::assembly) fn parse_type_definitions(
                 methods,
                 fields,
                 properties,
+                events,
                 nested_types: Vec::new(),
                 base_type,
                 interfaces,

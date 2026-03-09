@@ -83,6 +83,7 @@ pub(crate) fn convert_type_summary(td: &TypeDef) -> TypeSummary {
         attributes: decode_type_attributes(td.flags),
         member_count: (td.fields.len() + td.methods.len()) as u32,
         property_count: td.properties.len() as u32,
+        event_count: td.events.len() as u32,
         nested_type_count: td.nested_types.len() as u32,
         base_type: td.base_type.clone(),
         interfaces: td.interfaces.clone(),
@@ -155,6 +156,15 @@ fn collect_searchable_types(types: &[TypeDef], items: &mut Vec<SearchableItem>, 
                 full_name: format!("{}.{}", td.name, prop.name),
                 kind: SearchableKind::Property,
                 token: prop.token,
+                parent_token: Some(td.token),
+            });
+        }
+        for event in &td.events {
+            items.push(SearchableItem {
+                name: event.name.to_string(),
+                full_name: format!("{}.{}", td.name, event.name),
+                kind: SearchableKind::Event,
+                token: event.token,
                 parent_token: Some(td.token),
             });
         }

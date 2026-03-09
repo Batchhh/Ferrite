@@ -85,6 +85,18 @@ pub struct PropertyDef {
     pub custom_attributes: Vec<CustomAttribute>,
 }
 
+/// A parsed .NET event definition.
+#[derive(Debug, Clone)]
+pub struct EventDef {
+    pub token: u32,
+    pub name: Arc<str>,
+    pub event_type: String,
+    pub add_token: Option<u32>,
+    pub remove_token: Option<u32>,
+    pub raise_token: Option<u32>,
+    pub custom_attributes: Vec<CustomAttribute>,
+}
+
 /// A parsed .NET type definition.
 #[derive(Debug, Clone)]
 pub struct TypeDef {
@@ -96,6 +108,7 @@ pub struct TypeDef {
     pub methods: Vec<MethodDef>,
     pub fields: Vec<FieldDef>,
     pub properties: Vec<PropertyDef>,
+    pub events: Vec<EventDef>,
     pub nested_types: Vec<TypeDef>,
     pub base_type: Option<String>,
     pub interfaces: Vec<String>,
