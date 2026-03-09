@@ -80,6 +80,9 @@ func generateTypeCode(_ type_: TypeInfo, expandedProperties: Set<UInt32> = [], e
         if !type_.properties.isEmpty {
             if !regularFields.isEmpty { lines.append(.empty) }
             for (i, prop) in type_.properties.enumerated() {
+                for attr in prop.attributesList {
+                    lines.append(attributeLine(attr, indent: ind))
+                }
                 if expandedProperties.contains(prop.token) {
                     lines.append(contentsOf: propertyInfoLines(prop, methods: methods, indent: ind))
                 } else {
@@ -123,5 +126,46 @@ func generateMemberCode(_ member: MemberInfo, declaringType: TypeInfo) -> [CodeL
     case .method: lines.append(contentsOf: methodLines(member, typeName: declaringType.name, typeKind: declaringType.kind, indent: ""))
     default:      lines.append(.init(tokens: [.plain(member.name)]))
     }
+    return lines
+}
+
+// MARK: - Property Code Generation
+
+/// Generate syntax-colored code lines for a standalone property view.
+func generatePropertyCode(_ prop: PropertyInfo, declaringType: TypeInfo) -> [CodeLine] {
+    var lines: [CodeLine] = []
+    for attr in prop.attributesList {
+        lines.append(attributeLine(attr, indent: ""))
+    }
+    let methods = declaringType.members.filter { $0.kind == .method }
+    lines.append(contentsOf: propertyInfoLines(prop, methods: methods, indent: ""))
+    return lines
+}
+
+// MARK: - Event Code Generation
+
+/// Generate syntax-colored code lines for a standalone event view.
+func generateEventCode(_ event: EventInfo, declaringType: TypeInfo) -> [CodeLine] {
+    var lines: [CodeLine] = []
+    for attr in event.attributesList {
+        lines.append(attributeLine(attr, indent: ""))
+    }
+
+    var decl: [CodeToken] = []
+    // Derive visibility from add accessor
+    if let addToken = event.addToken,
+       let accessor = declaringType.members.first(where: { $0.token == addToken }),
+       let attrs = accessor.methodAttributes {
+        appendVisibility(&decl, attrs.visibility)
+        if attrs.isStatic { decl.append(.keyword("static")); decl.append(.space) }
+    }
+    decl.append(.keyword("event"))
+    decl.append(.space)
+    let et = event.eventType.isEmpty ? "object" : event.eventType
+    parseTypeTokens(et, into: &decl)
+    decl.append(.space)
+    decl.append(.field(event.name))
+    decl.append(.punct(";"))
+    lines.append(.init(tokens: decl))
     return lines
 }

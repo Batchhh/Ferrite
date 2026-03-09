@@ -46,6 +46,16 @@ extension DecompilerService {
         return type_.members.first { $0.token == memberToken }
     }
 
+    func findProperty(assemblyId: String, typeToken: UInt32, propertyToken: UInt32) -> PropertyInfo? {
+        guard let type_ = findType(assemblyId: assemblyId, token: typeToken) else { return nil }
+        return type_.properties.first { $0.token == propertyToken }
+    }
+
+    func findEvent(assemblyId: String, typeToken: UInt32, eventToken: UInt32) -> EventInfo? {
+        guard let type_ = findType(assemblyId: assemblyId, token: typeToken) else { return nil }
+        return type_.events.first { $0.token == eventToken }
+    }
+
     func findTypeByShortName(_ name: String, preferredAssemblyId: String? = nil) -> (assemblyId: String, token: UInt32)? {
         guard let entries = typeNameCache[name], !entries.isEmpty else { return nil }
         if let preferred = preferredAssemblyId,

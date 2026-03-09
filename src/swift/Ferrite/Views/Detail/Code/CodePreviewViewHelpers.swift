@@ -22,17 +22,26 @@ extension CodePreviewView {
                 return generateTypeCode(type_, expandedProperties: expandedProperties, expandedMethods: expandedMethods)
             }
         case .member(let assemblyId, let typeToken, let memberToken):
-            if let type_ = service.findType(assemblyId: assemblyId, token: typeToken),
-               let member = service.findMember(
-                   assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken
-               ) {
-                if member.kind == .method,
-                   let decompiled = service.decompileType(assemblyId: assemblyId, token: typeToken),
-                   let extracted = extractMethodFromDecompiled(decompiled, member: member, typeName: type_.name) {
-                    let allMethodTokens = Set(type_.members.filter { $0.kind == .method }.map(\.token))
-                    return parseDecompiledCode(extracted, type_: type_, assemblyId: assemblyId, expandedMethods: allMethodTokens)
+            if let type_ = service.findType(assemblyId: assemblyId, token: typeToken) {
+                if let member = service.findMember(
+                    assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken
+                ) {
+                    if member.kind == .method,
+                       let decompiled = service.decompileType(assemblyId: assemblyId, token: typeToken),
+                       let extracted = extractMethodFromDecompiled(decompiled, member: member, typeName: type_.name) {
+                        let allMethodTokens = Set(type_.members.filter { $0.kind == .method }.map(\.token))
+                        return parseDecompiledCode(extracted, type_: type_, assemblyId: assemblyId, expandedMethods: allMethodTokens)
+                    }
+                    return generateMemberCode(member, declaringType: type_)
+                } else if let prop = service.findProperty(
+                    assemblyId: assemblyId, typeToken: typeToken, propertyToken: memberToken
+                ) {
+                    return generatePropertyCode(prop, declaringType: type_)
+                } else if let event = service.findEvent(
+                    assemblyId: assemblyId, typeToken: typeToken, eventToken: memberToken
+                ) {
+                    return generateEventCode(event, declaringType: type_)
                 }
-                return generateMemberCode(member, declaringType: type_)
             }
         default:
             break
@@ -43,19 +52,35 @@ extension CodePreviewView {
     private var ilLines: [CodeLine] {
         let assemblyId: String
         let typeToken: UInt32
+        let memberToken: UInt32?
         switch service.selection {
         case .type(let aid, let token):
             assemblyId = aid
             typeToken = token
-        case .member(let aid, let tToken, _):
+            memberToken = nil
+        case .member(let aid, let tToken, let mToken):
             assemblyId = aid
             typeToken = tToken
+            memberToken = mToken
         default:
             return []
         }
         guard let il = service.disassembleTypeIL(assemblyId: assemblyId, token: typeToken) else {
             return []
         }
+
+        // For property/event member selections, extract focused IL
+        if let mToken = memberToken,
+           let type_ = service.findType(assemblyId: assemblyId, token: typeToken) {
+            if let prop = service.findProperty(assemblyId: assemblyId, typeToken: typeToken, propertyToken: mToken) {
+                let extracted = extractPropertyIL(il, property: prop, type_: type_)
+                return parseILCode(extracted)
+            } else if let event = service.findEvent(assemblyId: assemblyId, typeToken: typeToken, eventToken: mToken) {
+                let extracted = extractEventIL(il, event: event, type_: type_)
+                return parseILCode(extracted)
+            }
+        }
+
         return parseILCode(il)
     }
 

@@ -89,6 +89,7 @@ extension SearchIndex {
         case .method: return .method
         case .field: return .field
         case .property: return .property
+        case .event: return .event
         case .constant: return .constant
         }
     }

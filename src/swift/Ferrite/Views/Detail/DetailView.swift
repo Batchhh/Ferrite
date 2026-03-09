@@ -45,11 +45,20 @@ struct DetailView: View {
                 TypeDetailView(type_: type_, assemblyId: assemblyId)
             }
         case .member(let assemblyId, let typeToken, let memberToken):
-            if let type_ = service.findType(assemblyId: assemblyId, token: typeToken),
-               let member = service.findMember(
-                   assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken
-               ) {
-                MemberDetailView(member: member, declaringType: type_)
+            if let type_ = service.findType(assemblyId: assemblyId, token: typeToken) {
+                if let member = service.findMember(
+                    assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken
+                ) {
+                    MemberDetailView(member: member, declaringType: type_)
+                } else if let prop = service.findProperty(
+                    assemblyId: assemblyId, typeToken: typeToken, propertyToken: memberToken
+                ) {
+                    PropertyDetailView(property: prop, declaringType: type_)
+                } else if let event = service.findEvent(
+                    assemblyId: assemblyId, typeToken: typeToken, eventToken: memberToken
+                ) {
+                    EventDetailView(event: event, declaringType: type_)
+                }
             }
         }
     }

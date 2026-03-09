@@ -82,6 +82,20 @@ struct BreadcrumbBar: View {
                             color: colorForMemberKind(member.kind),
                             selection: .member(assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken)
                         ))
+                    } else if let prop = service.findProperty(assemblyId: assemblyId, typeToken: typeToken, propertyToken: memberToken) {
+                        result.append(Crumb(
+                            label: prop.name,
+                            icon: iconForMemberKind(.property),
+                            color: colorForMemberKind(.property),
+                            selection: .member(assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken)
+                        ))
+                    } else if let event = service.findEvent(assemblyId: assemblyId, typeToken: typeToken, eventToken: memberToken) {
+                        result.append(Crumb(
+                            label: event.name,
+                            icon: iconForMemberKind(.event),
+                            color: colorForMemberKind(.event),
+                            selection: .member(assemblyId: assemblyId, typeToken: typeToken, memberToken: memberToken)
+                        ))
                     }
                 }
             }
