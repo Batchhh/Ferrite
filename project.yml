@@ -32,3 +32,8 @@ targets:
         GENERATE_INFOPLIST_FILE: false
         MACOSX_DEPLOYMENT_TARGET: "26.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          STRIP_INSTALLED_PRODUCT: YES
+          DEPLOYMENT_POSTPROCESSING: YES
+          DEAD_CODE_STRIPPING: YES

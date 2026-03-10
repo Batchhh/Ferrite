@@ -49,6 +49,7 @@ dmg: release
 	@rm -rf build/dmg build/Ferrite-*.dmg build/Ferrite.dmg
 	@mkdir -p build/dmg
 	@cp -R build/Ferrite.xcarchive/Products/Applications/Ferrite.app build/dmg/
+	@strip -x build/dmg/Ferrite.app/Contents/MacOS/Ferrite
 	@codesign --force --deep --sign - build/dmg/Ferrite.app
 	@xattr -cr build/dmg/Ferrite.app
 	@ln -s /Applications build/dmg/Applications
