@@ -12,7 +12,7 @@ xcuserdata/
 src/swift/Ferrite/Generated/
 
 # macOS
-.DS_Store
+*.DS_Store
 *.dSYM/
 
 # Build artifacts
