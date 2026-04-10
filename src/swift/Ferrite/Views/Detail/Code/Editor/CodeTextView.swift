@@ -61,8 +61,15 @@ struct CodeView: NSViewRepresentable {
         gutterTextView.textContainerInset = NSSize(width: 0, height: 12)
         gutterTextView.textContainer?.lineFragmentPadding = 0
         gutterTextView.textContainer?.widthTracksTextView = true
+        gutterTextView.textContainer?.containerSize = NSSize(
+            width: Self.gutterWidth,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        gutterTextView.minSize = NSSize(width: Self.gutterWidth, height: 0)
+        gutterTextView.maxSize = NSSize(width: Self.gutterWidth, height: CGFloat.greatestFiniteMagnitude)
         gutterTextView.isVerticallyResizable = true
         gutterTextView.isHorizontallyResizable = false
+        gutterTextView.autoresizingMask = [.width]
 
         let gutterScroll = NSScrollView()
         gutterScroll.documentView = gutterTextView
@@ -105,9 +112,12 @@ struct CodeView: NSViewRepresentable {
 
         textView.textStorage?.setAttributedString(buildAttributedCode())
         gutterTextView.textStorage?.setAttributedString(buildLineNumbers())
-        if let lm = textView.layoutManager, let tc = textView.textContainer {
-            lm.ensureLayout(for: tc)
-        }
+        updateDocumentFrames(
+            textView: textView,
+            gutterTextView: gutterTextView,
+            codeScroll: codeScroll,
+            gutterScroll: gutterScroll
+        )
         applySearchHighlights(textView: textView)
         textView.scrollToBeginningOfDocument(nil)
         return container
@@ -126,13 +136,12 @@ struct CodeView: NSViewRepresentable {
         let savedOrigin = codeScroll.contentView.bounds.origin
         textView.textStorage?.setAttributedString(buildAttributedCode())
         gutterTextView.textStorage?.setAttributedString(buildLineNumbers())
-        // Force layout recalculation so the scroll view knows the new document size
-        if let layoutManager = textView.layoutManager, let textContainer = textView.textContainer {
-            layoutManager.ensureLayout(for: textContainer)
-        }
-        if let gutterLayout = gutterTextView.layoutManager, let gutterContainer = gutterTextView.textContainer {
-            gutterLayout.ensureLayout(for: gutterContainer)
-        }
+        updateDocumentFrames(
+            textView: textView,
+            gutterTextView: gutterTextView,
+            codeScroll: codeScroll,
+            gutterScroll: gutterScroll
+        )
         codeScroll.contentView.scroll(to: savedOrigin)
         codeScroll.reflectScrolledClipView(codeScroll.contentView)
         gutterScroll.contentView.scroll(to: NSPoint(x: 0, y: savedOrigin.y))
@@ -184,5 +193,36 @@ struct CodeView: NSViewRepresentable {
         }
     }
 
-}
+    private func updateDocumentFrames(
+        textView: NSTextView,
+        gutterTextView: NSTextView,
+        codeScroll: NSScrollView,
+        gutterScroll: NSScrollView
+    ) {
+        let codeSize = documentSize(for: textView)
+        let gutterSize = documentSize(for: gutterTextView)
+        let contentHeight = max(codeSize.height, gutterSize.height, codeScroll.contentSize.height, gutterScroll.contentSize.height)
 
+        textView.setFrameSize(NSSize(
+            width: max(codeSize.width, codeScroll.contentSize.width),
+            height: contentHeight
+        ))
+        gutterTextView.setFrameSize(NSSize(
+            width: Self.gutterWidth,
+            height: contentHeight
+        ))
+    }
+
+    private func documentSize(for textView: NSTextView) -> NSSize {
+        guard let layoutManager = textView.layoutManager,
+              let textContainer = textView.textContainer else {
+            return textView.fittingSize
+        }
+
+        layoutManager.ensureLayout(for: textContainer)
+        var usedRect = layoutManager.usedRect(for: textContainer)
+        usedRect.size.width += textView.textContainerInset.width * 2
+        usedRect.size.height += textView.textContainerInset.height * 2
+        return usedRect.integral.size
+    }
+}
