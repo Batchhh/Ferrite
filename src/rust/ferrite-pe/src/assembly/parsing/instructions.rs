@@ -8,6 +8,86 @@ use super::super::resolve::{
 };
 use super::super::Assembly;
 
+fn map_conversion(
+    target: dotnetdll::resolved::il::ConversionType,
+    checked: bool,
+    source_sign: Option<dotnetdll::resolved::il::NumberSign>,
+) -> OpCode {
+    use dotnetdll::resolved::il::{ConversionType, NumberSign};
+
+    if checked {
+        let sign = source_sign.unwrap_or(NumberSign::Signed);
+        return match (target, sign) {
+            (ConversionType::Int8, NumberSign::Signed) => OpCode::ConvOvfI1,
+            (ConversionType::Int8, NumberSign::Unsigned) => OpCode::ConvOvfI1Un,
+            (ConversionType::UInt8, NumberSign::Signed) => OpCode::ConvOvfU1,
+            (ConversionType::UInt8, NumberSign::Unsigned) => OpCode::ConvOvfU1Un,
+            (ConversionType::Int16, NumberSign::Signed) => OpCode::ConvOvfI2,
+            (ConversionType::Int16, NumberSign::Unsigned) => OpCode::ConvOvfI2Un,
+            (ConversionType::UInt16, NumberSign::Signed) => OpCode::ConvOvfU2,
+            (ConversionType::UInt16, NumberSign::Unsigned) => OpCode::ConvOvfU2Un,
+            (ConversionType::Int32, NumberSign::Signed) => OpCode::ConvOvfI4,
+            (ConversionType::Int32, NumberSign::Unsigned) => OpCode::ConvOvfI4Un,
+            (ConversionType::UInt32, NumberSign::Signed) => OpCode::ConvOvfU4,
+            (ConversionType::UInt32, NumberSign::Unsigned) => OpCode::ConvOvfU4Un,
+            (ConversionType::Int64, NumberSign::Signed) => OpCode::ConvOvfI8,
+            (ConversionType::Int64, NumberSign::Unsigned) => OpCode::ConvOvfI8Un,
+            (ConversionType::UInt64, NumberSign::Signed) => OpCode::ConvOvfU8,
+            (ConversionType::UInt64, NumberSign::Unsigned) => OpCode::ConvOvfU8Un,
+            (ConversionType::IntPtr, NumberSign::Signed) => OpCode::ConvOvfI,
+            (ConversionType::IntPtr, NumberSign::Unsigned) => OpCode::ConvOvfIUn,
+            (ConversionType::UIntPtr, NumberSign::Signed) => OpCode::ConvOvfU,
+            (ConversionType::UIntPtr, NumberSign::Unsigned) => OpCode::ConvOvfUUn,
+        };
+    }
+
+    match target {
+        ConversionType::Int8 => OpCode::ConvI1,
+        ConversionType::UInt8 => OpCode::ConvU1_D2,
+        ConversionType::Int16 => OpCode::ConvI2,
+        ConversionType::UInt16 => OpCode::ConvU2_D1,
+        ConversionType::Int32 => OpCode::ConvI4,
+        ConversionType::UInt32 => OpCode::ConvU4,
+        ConversionType::Int64 => OpCode::ConvI8,
+        ConversionType::UInt64 => OpCode::ConvU8,
+        ConversionType::IntPtr => OpCode::ConvI,
+        ConversionType::UIntPtr => OpCode::ConvU,
+    }
+}
+
+fn map_load_element(load_type: dotnetdll::resolved::il::LoadType) -> OpCode {
+    use dotnetdll::resolved::il::LoadType;
+
+    match load_type {
+        LoadType::Int8 => OpCode::LdelemI1,
+        LoadType::UInt8 => OpCode::LdelemU1,
+        LoadType::Int16 => OpCode::LdelemI2,
+        LoadType::UInt16 => OpCode::LdelemU2,
+        LoadType::Int32 => OpCode::LdelemI4,
+        LoadType::UInt32 => OpCode::LdelemU4,
+        LoadType::Int64 => OpCode::LdelemI8,
+        LoadType::Float32 => OpCode::LdelemR4,
+        LoadType::Float64 => OpCode::LdelemR8,
+        LoadType::IntPtr => OpCode::LdelemI,
+        LoadType::Object => OpCode::LdelemRef,
+    }
+}
+
+fn map_store_element(store_type: dotnetdll::resolved::il::StoreType) -> OpCode {
+    use dotnetdll::resolved::il::StoreType;
+
+    match store_type {
+        StoreType::Int8 => OpCode::StelemI1,
+        StoreType::Int16 => OpCode::StelemI2,
+        StoreType::Int32 => OpCode::StelemI4,
+        StoreType::Int64 => OpCode::StelemI8,
+        StoreType::Float32 => OpCode::StelemR4,
+        StoreType::Float64 => OpCode::StelemR8,
+        StoreType::IntPtr => OpCode::StelemI,
+        StoreType::Object => OpCode::StelemRef,
+    }
+}
+
 /// Convert a dotnetdll resolved IL instruction to an `(OpCode, Operand)` pair.
 ///
 /// String literals are interned into `asm.user_strings` and replaced with a synthetic token.
@@ -238,8 +318,13 @@ pub(in crate::assembly) fn convert_instruction(
             (OpCode::Sizeof, Operand::ResolvedName(name))
         }
 
-        DI::LoadElement { .. } => (OpCode::Ldelem, Operand::None),
-        DI::LoadElementPrimitive { .. } => (OpCode::LdelemI4, Operand::None),
+        DI::LoadElement { param0: ref mt, .. } => {
+            let name = format_method_type(mt, res);
+            (OpCode::Ldelem, Operand::ResolvedName(name))
+        }
+        DI::LoadElementPrimitive { param0: ref load_type, .. } => {
+            (map_load_element(*load_type), Operand::None)
+        }
         DI::LoadElementAddress { param0: ref mt, .. } => {
             let name = format_method_type(mt, res);
             (OpCode::Ldelema, Operand::ResolvedName(name))
@@ -248,8 +333,13 @@ pub(in crate::assembly) fn convert_instruction(
             let name = format_method_type(mt, res);
             (OpCode::Ldelema, Operand::ResolvedName(name))
         }
-        DI::StoreElement { .. } => (OpCode::Stelem, Operand::None),
-        DI::StoreElementPrimitive { .. } => (OpCode::StelemI4, Operand::None),
+        DI::StoreElement { param0: ref mt, .. } => {
+            let name = format_method_type(mt, res);
+            (OpCode::Stelem, Operand::ResolvedName(name))
+        }
+        DI::StoreElementPrimitive { param0: ref store_type, .. } => {
+            (map_store_element(*store_type), Operand::None)
+        }
 
         DI::LoadTokenType(ref mt) => {
             let name = format_method_type(mt, res);
@@ -273,16 +363,27 @@ pub(in crate::assembly) fn convert_instruction(
             (OpCode::Ldvirtftn, Operand::ResolvedName(name))
         }
 
-        DI::Convert(_)
-        | DI::ConvertOverflow(_, _)
-        | DI::ConvertFloat32
-        | DI::ConvertFloat64
-        | DI::ConvertUnsignedToFloat
-        | DI::CheckFinite => (OpCode::Nop, Operand::None),
+        DI::Convert(target) => (map_conversion(*target, false, None), Operand::None),
+        DI::ConvertOverflow(target, sign) => {
+            (map_conversion(*target, true, Some(*sign)), Operand::None)
+        }
+        DI::ConvertFloat32 => (OpCode::ConvR4, Operand::None),
+        DI::ConvertFloat64 => (OpCode::ConvR8, Operand::None),
+        DI::ConvertUnsignedToFloat => (OpCode::ConvRUn, Operand::None),
+        DI::CheckFinite => (OpCode::Ckfinite, Operand::None),
 
-        DI::LoadObject { .. } => (OpCode::Ldobj, Operand::None),
-        DI::StoreObject { .. } => (OpCode::Stobj, Operand::None),
-        DI::CopyObject(_) => (OpCode::Cpobj, Operand::None),
+        DI::LoadObject { param0: ref mt, .. } => {
+            let name = format_method_type(mt, res);
+            (OpCode::Ldobj, Operand::ResolvedName(name))
+        }
+        DI::StoreObject { param0: ref mt, .. } => {
+            let name = format_method_type(mt, res);
+            (OpCode::Stobj, Operand::ResolvedName(name))
+        }
+        DI::CopyObject(ref mt) => {
+            let name = format_method_type(mt, res);
+            (OpCode::Cpobj, Operand::ResolvedName(name))
+        }
 
         DI::AddOverflow(NumberSign::Signed) => (OpCode::AddOvf, Operand::None),
         DI::AddOverflow(NumberSign::Unsigned) => (OpCode::AddOvfUn, Operand::None),

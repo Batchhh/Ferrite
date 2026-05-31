@@ -227,8 +227,29 @@ pub fn format_opcode(op: &OpCode) -> &'static str {
     }
 }
 
+fn format_resolved_name_operand(opcode: &OpCode, name: &str) -> String {
+    match opcode {
+        // Method calls are stored as "name|param_count|has_return|is_static" so the
+        // stack decompiler can recover call arity.  The IL disassembler should show
+        // the target name, not that private bookkeeping record.
+        OpCode::Call | OpCode::Callvirt | OpCode::Newobj => strip_call_info(name).to_string(),
+        _ => name.to_string(),
+    }
+}
+
+fn strip_call_info(info: &str) -> &str {
+    let mut parts = info.split('|');
+    let name = parts.next().unwrap_or(info);
+
+    if parts.clone().count() == 3 {
+        name
+    } else {
+        info
+    }
+}
+
 /// Format an operand for display in IL disassembly.
-pub fn format_operand(operand: &Operand, resolver: &MetadataResolver) -> String {
+pub fn format_operand(opcode: &OpCode, operand: &Operand, resolver: &MetadataResolver) -> String {
     match operand {
         Operand::None => String::new(),
         Operand::Int8(v) => format!("{}", v),
@@ -244,6 +265,6 @@ pub fn format_operand(operand: &Operand, resolver: &MetadataResolver) -> String 
             format!("({})", labels.join(", "))
         }
         Operand::Var(idx) => format!("V_{}", idx),
-        Operand::ResolvedName(name) => name.clone(),
+        Operand::ResolvedName(name) => format_resolved_name_operand(opcode, name),
     }
 }

@@ -181,7 +181,7 @@ fn emit_method(out: &mut String, method: &MethodDef, resolver: &MetadataResolver
 
         for instr in &body.instructions {
             let opname = format_opcode(&instr.opcode);
-            let operand_str = format_operand(&instr.operand, resolver);
+            let operand_str = format_operand(&instr.opcode, &instr.operand, resolver);
             if operand_str.is_empty() {
                 out.push_str(&format!("{inner}IL_{:04x}: {opname}\n", instr.offset));
             } else {
