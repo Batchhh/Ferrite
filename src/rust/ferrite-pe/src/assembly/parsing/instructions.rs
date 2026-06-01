@@ -322,9 +322,10 @@ pub(in crate::assembly) fn convert_instruction(
             let name = format_method_type(mt, res);
             (OpCode::Ldelem, Operand::ResolvedName(name))
         }
-        DI::LoadElementPrimitive { param0: ref load_type, .. } => {
-            (map_load_element(*load_type), Operand::None)
-        }
+        DI::LoadElementPrimitive {
+            param0: ref load_type,
+            ..
+        } => (map_load_element(*load_type), Operand::None),
         DI::LoadElementAddress { param0: ref mt, .. } => {
             let name = format_method_type(mt, res);
             (OpCode::Ldelema, Operand::ResolvedName(name))
@@ -337,9 +338,10 @@ pub(in crate::assembly) fn convert_instruction(
             let name = format_method_type(mt, res);
             (OpCode::Stelem, Operand::ResolvedName(name))
         }
-        DI::StoreElementPrimitive { param0: ref store_type, .. } => {
-            (map_store_element(*store_type), Operand::None)
-        }
+        DI::StoreElementPrimitive {
+            param0: ref store_type,
+            ..
+        } => (map_store_element(*store_type), Operand::None),
 
         DI::LoadTokenType(ref mt) => {
             let name = format_method_type(mt, res);
