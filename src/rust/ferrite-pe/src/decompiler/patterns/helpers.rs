@@ -16,11 +16,7 @@ pub(super) fn finally_calls_dispose(finally: &[Statement]) -> bool {
     for stmt in finally {
         match stmt {
             Statement::Expr(Expr::Call(_, name, _)) if name == "Dispose" => return true,
-            Statement::If(_, then_block, _) => {
-                if finally_calls_dispose(then_block) {
-                    return true;
-                }
-            }
+            Statement::If(_, then_block, _) if finally_calls_dispose(then_block) => return true,
             _ => {}
         }
     }

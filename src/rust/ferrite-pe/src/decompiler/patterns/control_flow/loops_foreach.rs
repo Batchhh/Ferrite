@@ -183,10 +183,8 @@ fn extract_current_access(body: &[Statement]) -> Option<(String, String, usize)>
                 return Some((name, "var".to_string(), 1));
             }
         }
-        Statement::LocalDecl(ty, name, Some(value)) => {
-            if is_current_access(value) {
-                return Some((name.clone(), ty.clone(), 1));
-            }
+        Statement::LocalDecl(ty, name, Some(value)) if is_current_access(value) => {
+            return Some((name.clone(), ty.clone(), 1));
         }
         _ => {}
     }
@@ -198,11 +196,9 @@ fn extract_current_access(body: &[Statement]) -> Option<(String, String, usize)>
                 return Some((name, ty.clone(), 1));
             }
         }
-        Statement::Assign(target, Expr::Unbox(ty, inner)) => {
-            if is_current_access(inner) {
-                let name = expr_var_name(target)?;
-                return Some((name, ty.clone(), 1));
-            }
+        Statement::Assign(target, Expr::Unbox(ty, inner)) if is_current_access(inner) => {
+            let name = expr_var_name(target)?;
+            return Some((name, ty.clone(), 1));
         }
         _ => {}
     }

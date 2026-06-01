@@ -145,11 +145,7 @@ fn finally_has_monitor_exit(finally: &[Statement]) -> bool {
                 return true;
             }
             Statement::Expr(Expr::Call(_, m, _)) if m == "Exit" => return true,
-            Statement::If(_, then_b, _) => {
-                if finally_has_monitor_exit(then_b) {
-                    return true;
-                }
-            }
+            Statement::If(_, then_b, _) if finally_has_monitor_exit(then_b) => return true,
             _ => {}
         }
     }
